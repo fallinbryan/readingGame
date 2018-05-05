@@ -21,8 +21,10 @@ class Game(object):
             self.words = pickle.load(pf)
 
         self.voice = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0'
+        self.rate = 180
         self.speech_engine = pyttsx3.init()
         self.speech_engine.setProperty('voice', self.voice)
+        self.speech_engine.setProperty('rate',self.rate)
         self.correct_choices = 0
         self.wrong_choices = 0
         self.correct_index = 0
@@ -111,11 +113,14 @@ class Game(object):
         current_word = self.words[self.correct_index]
         self.speech_engine.say('Spelling {} now'.format(current_word))
         self.speech_engine.runAndWait()
-        self.speech_engine.setProperty('rate',self.rate+100)
+        self.speech_engine.setProperty('rate', self.rate+100)
+        string = ''
         for ch in current_word:
-            self.speech_engine.say(ch)
-            self.speech_engine.runAndWait()
-        self.speech_engine.setProperty('rate',self.rate)
+            string += '{} '.format(ch)
+        self.speech_engine.say(string)
+
+        self.speech_engine.runAndWait()
+        self.speech_engine.setProperty('rate', self.rate)
 
 class MainWindow(tk.Tk):
     def __init__(self, *args, **kwargs):
