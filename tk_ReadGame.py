@@ -34,6 +34,7 @@ class Game(object):
         self.correct_choices = 0
         self.wrong_choices = 0
         self.correct_index = 0
+        self.turns = 0
 
     def randomize_correct_index(self):
         random.seed(time.clock())
@@ -51,7 +52,7 @@ class Game(object):
             start = 0
         if end > len(self.words):
             end = len(self.words)-1
-        for _ in range(5):
+        for _ in range(3):
             new_index = random.randrange(start, end)
             while new_index == self.correct_index:
                 new_index = random.randrange(start, end)
@@ -127,16 +128,32 @@ class Game(object):
 
         self.speech_engine.setProperty('rate', self.rate)
 
+
+
 class MainWindow(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         # self.geometry('900x500')
         self.game = Game()
         self.game.randomize_correct_index()
+        self.history = []
+        self.turns = 0
+        self.max_turns = 10
         self.scores = [0.0]
-        self.midline = [0.5]
-        self.font = tkFont.Font(family='helvetica',size=30)
+        self.a_line = [0.9 for _ in range(self.max_turns)]
+        self.b_line = [0.8 for _ in range(self.max_turns)]
+        self.c_line = [0.7 for _ in range(self.max_turns)]
+        self.d_line = [0.6 for _ in range(self.max_turns)]
+        self.midline = [0.5 for _ in range(self.max_turns)]
+        self.attributes('-fullscreen', True)
+        self.font = tkFont.Font(family='helvetica', size=20)
 
+        self.menubar = tk.Menu(self)
+        self.menubar.add_command(label='Exit', command=self.exit_process)
+        self.menubar.add_command(label='Show History', command=self.display_user_progress)
+        self.config(menu=self.menubar)
+
+        self.user = self.get_current_user()
 
         self.word_to_find_Label = tk.Label(self, text='Click the Right Word').pack()
         self.iamScoreLabel = tk.Label(self, text='SCORE').pack(side=tk.TOP, anchor=tk.NE)
@@ -147,7 +164,13 @@ class MainWindow(tk.Tk):
 
         self.plot_fig = Figure(figsize=(5, 5), dpi=100)
         self.add_plot = self.plot_fig.add_subplot(111)
-        self.add_plot.plot(self.scores)
+        self.add_plot.plot(self.scores, label='score')
+        self.add_plot.plot(self.midline, label='half')
+        self.add_plot.plot(self.a_line, label='A')
+        self.add_plot.plot(self.b_line, label='B')
+        self.add_plot.plot(self.c_line, label='C')
+        self.add_plot.plot(self.d_line, label='D')
+        self.add_plot.legend()
         self.canvas = FigureCanvasTkAgg(self.plot_fig, self.score_frame)
         self.canvas.show()
         self.canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
@@ -166,7 +189,7 @@ class MainWindow(tk.Tk):
         self.spell_word_button.pack()
         self.guess_buttons = []
         for word, index in self.game.get_choice_list():
-            self.guess_buttons.append(tk.Button(self, text=word, pady=5, command=lambda c=index: self.b_click(c)))
+            self.guess_buttons.append(tk.Button(self, text=word,font=self.font, command=lambda c=index: self.b_click(c)))
 
         for b in self.guess_buttons:
             b.pack(expand=1, fill=tk.BOTH)
@@ -198,11 +221,29 @@ class MainWindow(tk.Tk):
         self.photo = ImageTk.PhotoImage(self.game.get_current_image().resize((200, 200)))
         self.image_Canvas.create_image(10, 10, image=self.photo, anchor='nw')
 
+    def display_user_progress(self):
+        try:
+            with open('progressTable.pickle', 'rb') as pf:
+                progress = pickle.load(pf)
+        except:
+            progress = {self.user: []}
+
+        scores = self.scores[:]
+        self.scores.clear()
+        self.add_plot.clear()
+        self.history = progress[self.user][:]
+        self.add_plot.plot(self.history, label='Historical Score')
+        self.canvas.draw()
+
+        self.scores = scores[:]
+
     def update_Score_Frame(self):
+        self.history = []
+        self.add_plot.clear()
         self.score_label.pack_forget()
         self.score_label.destroy()
         self.scores.append(self.game.get_score())
-        self.midline.append(0.5)
+        # self.midline.append(0.5)
         if self.game.get_score() > 0.5:
             fg = 'Green'
         else:
@@ -213,8 +254,13 @@ class MainWindow(tk.Tk):
         # self.canvas_widget.pack_forget()
         # self.canvas_widget.destroy()
 
-        self.add_plot.plot(self.scores)
-        self.add_plot.plot(self.midline)
+        self.add_plot.plot(self.scores, label='score')
+        self.add_plot.plot(self.midline, label='half')
+        self.add_plot.plot(self.a_line, label='A')
+        self.add_plot.plot(self.b_line, label='B')
+        self.add_plot.plot(self.c_line, label='C')
+        self.add_plot.plot(self.d_line, label='D')
+        self.add_plot.legend()
         # self.canvas = FigureCanvasTkAgg(self.plot_fig, self.score_frame)
         self.canvas.draw()
 
@@ -222,6 +268,24 @@ class MainWindow(tk.Tk):
         # self.canvas_widget.update()
         # self.canvas_widget = self.canvas.get_tk_widget()
         # self.canvas_widget.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+    def pack_progress(self):
+        try:
+            with open('progressTable.pickle','rb') as pf:
+                progress = pickle.load(pf)
+        except:
+            progress = {self.user: []}
+
+        progress[self.user].append(self.game.get_score())
+        print(progress)
+        with open('progressTable.pickle', 'wb') as pf:
+            pickle.dump(progress, pf)
+
+    def get_current_user(self):
+        return 'test_user'
+
+    def exit_process(self):
+        self.pack_progress()
+        self.quit()
 
 app = MainWindow()
 app.mainloop()
