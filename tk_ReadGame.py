@@ -20,9 +20,11 @@ class Game(object):
         with open('words.pickle', 'rb') as pf:
             self.words = pickle.load(pf)
 
-        self.voice = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0'
-        self.speech_engine = pyttsx3.init()
+        self.voice = 'english'
+        self.rate = 120
+        self.speech_engine = pyttsx3.init('espeak')
         self.speech_engine.setProperty('voice', self.voice)
+        self.speech_engine.setProperty('rate',self.rate)
         self.correct_choices = 0
         self.wrong_choices = 0
         self.correct_index = 0
