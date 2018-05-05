@@ -17,6 +17,43 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 random.seed(time.clock())
 
+def avg(lst):
+    sum = 0
+    try:
+        for i in lst:
+            sum += i
+    except TypeError:
+        return lst
+    try:
+        a = sum/len(lst)
+    except ZeroDivisionError:
+        a = 0.0
+    return a
+
+
+class User(object):
+    def __init__(self, name):
+        self.name = name
+        self.difficulty = 1
+        self.history = []
+        self.recent_avg = 0.0
+
+    def update_recent_avg(self):
+        self.recent_avg = avg(self.history[-3:])
+
+    def update_difficutly(self):
+        if self.recent_avg > 0.85:
+            if self.difficulty <= 5:
+                self.difficulty += 1
+        else:
+            if self.difficulty > 1:
+                self.difficulty -= 1
+    def __str__(self):
+        string = 'Name:{}\nLevel:{}\nRecent_Avg:{}'.format(self.name.upper(),
+                                                           self.difficulty,
+                                                           self.recent_avg)
+        return string
+
 class Game(object):
     def __init__(self):
         with open('words.pickle', 'rb') as pf:
@@ -34,11 +71,15 @@ class Game(object):
         self.correct_choices = 0
         self.wrong_choices = 0
         self.correct_index = 0
-        self.turns = 0
+        self.max_difficulty = 5
+        self.difficulty = 5
+        self.difficulty_map = {1: 3, 2: 4, 3: 5, 4: 6, 5: 20}
 
     def randomize_correct_index(self):
         random.seed(time.clock())
         self.correct_index = random.randrange(0, len(self.words))
+        while len(self.words[self.correct_index]) > self.difficulty_map[self.difficulty]:
+            self.correct_index = random.randrange(0, len(self.words))
 
     def get_choice_list(self):
         '''
@@ -46,16 +87,24 @@ class Game(object):
         :return: list of tuples [ ($word, index), ... ]
         '''
         word_option_indexes = [self.correct_index]
-        start = self.correct_index - 20
-        end = self.correct_index + 20
+        index_range = {1: 200, 2: 70, 3: 50, 4: 20, 5: 10}
+        start = self.correct_index - index_range[self.difficulty]
+        end = self.correct_index + index_range[self.difficulty]
         if start < 0:
             start = 0
         if end > len(self.words):
             end = len(self.words)-1
         for _ in range(3):
             new_index = random.randrange(start, end)
-            while new_index == self.correct_index:
+            while new_index == self.correct_index or \
+                new_index in word_option_indexes or \
+                len(self.words[new_index]) > self.difficulty_map[self.difficulty]:
                 new_index = random.randrange(start, end)
+                # print('checking word index{}:{}'.format(new_index, self.words[new_index]))
+                # print('Word in List already? {}'.format(new_index in word_option_indexes))
+                # print('Word len > {} ? {}'.format(self.difficulty_map[self.difficulty],
+                #                                   len(self.words[new_index]) > self.difficulty_map[self.difficulty]))
+                # print('Word index is correct option index?'.format(new_index == self.correct_index))
             word_option_indexes.append(new_index)
         random.seed(time.clock())
         random.shuffle(word_option_indexes)
@@ -135,7 +184,12 @@ class MainWindow(tk.Tk):
         tk.Tk.__init__(self, *args, **kwargs)
         # self.geometry('900x500')
         self.game = Game()
+        self.user = self.get_user('test_user')
+
+        self.update_user_difficulty()
+        self.set_difficulty_from_current_user()
         self.game.randomize_correct_index()
+        print(self.user, self.user.history)
         self.history = []
         self.turns = 0
         self.max_turns = 10
@@ -153,7 +207,7 @@ class MainWindow(tk.Tk):
         self.menubar.add_command(label='Show History', command=self.display_user_progress)
         self.config(menu=self.menubar)
 
-        self.user = self.get_current_user()
+
 
         self.word_to_find_Label = tk.Label(self, text='Click the Right Word').pack()
         self.iamScoreLabel = tk.Label(self, text='SCORE').pack(side=tk.TOP, anchor=tk.NE)
@@ -189,7 +243,10 @@ class MainWindow(tk.Tk):
         self.spell_word_button.pack()
         self.guess_buttons = []
         for word, index in self.game.get_choice_list():
-            self.guess_buttons.append(tk.Button(self, text=word,font=self.font, command=lambda c=index: self.b_click(c)))
+            print('converting {} to button'.format(word))
+            self.guess_buttons.append(tk.Button(self, text=word, font=self.font, command=lambda c=index: self.b_click(c)))
+
+        print('Buttons Generated')
 
         for b in self.guess_buttons:
             b.pack(expand=1, fill=tk.BOTH)
@@ -222,16 +279,11 @@ class MainWindow(tk.Tk):
         self.image_Canvas.create_image(10, 10, image=self.photo, anchor='nw')
 
     def display_user_progress(self):
-        try:
-            with open('progressTable.pickle', 'rb') as pf:
-                progress = pickle.load(pf)
-        except:
-            progress = {self.user: []}
-
+        progress = self.user.history[:]
         scores = self.scores[:]
         self.scores.clear()
         self.add_plot.clear()
-        self.history = progress[self.user][:]
+        self.history = progress[:]
         self.add_plot.plot(self.history, label='Historical Score')
         self.canvas.draw()
 
@@ -270,18 +322,34 @@ class MainWindow(tk.Tk):
         # self.canvas_widget.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
     def pack_progress(self):
         try:
-            with open('progressTable.pickle','rb') as pf:
-                progress = pickle.load(pf)
+            with open('progressTable.pickle', 'rb') as pf:
+                userMap = pickle.load(pf)
         except:
-            progress = {self.user: []}
+            userMap = {self.user.name: self.user}
 
-        progress[self.user].append(self.game.get_score())
-        print(progress)
+        self.user.history.append(self.game.get_score())
+        userMap[self.user.name] = self.user
+        print(self.user)
         with open('progressTable.pickle', 'wb') as pf:
-            pickle.dump(progress, pf)
+            pickle.dump(userMap, pf)
 
-    def get_current_user(self):
-        return 'test_user'
+
+    def get_user(self, username):
+        try:
+            with open('progressTable.pickle','rb') as pf:
+                userMap = pickle.load(pf)
+            user = userMap[username]
+        except:
+            user = User(username)
+        return user
+
+    def set_difficulty_from_current_user(self):
+        self.game.difficulty = self.user.difficulty
+
+    def update_user_difficulty(self):
+        self.user.update_recent_avg()
+        self.user.update_difficutly()
+
 
     def exit_process(self):
         self.pack_progress()
