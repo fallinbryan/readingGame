@@ -5,6 +5,7 @@ import pickle
 import random
 import time
 import requests
+import platform
 from bs4 import BeautifulSoup as soup
 from PIL import Image, ImageTk
 from io import BytesIO
@@ -20,7 +21,10 @@ class Game(object):
         with open('words.pickle', 'rb') as pf:
             self.words = pickle.load(pf)
 
-        self.voice = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0'
+        if platform.system() == 'Windows':
+            voice = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0'
+        elif platform.system() == 'Linux':
+            voice = 'english'
         self.rate = 180
         self.speech_engine = pyttsx3.init()
         self.speech_engine.setProperty('voice', self.voice)

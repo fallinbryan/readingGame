@@ -1,10 +1,15 @@
 import pickle
 import random
+import platform
 import time
 
 import pyttsx3
 speech_engine = pyttsx3.init()
-voice = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0'
+if platform.system() == 'Windows':
+    voice = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0'
+elif platform.system() == 'Linux':
+    voice = 'english'
+
 speech_engine.setProperty('voice',voice)
 with open('words.pickle','rb') as pf:
     words = pickle.load(pf)
