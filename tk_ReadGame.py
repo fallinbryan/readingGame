@@ -243,6 +243,7 @@ class MainWindow(tk.Tk):
         tk.Tk.__init__(self, *args, **kwargs)
         # self.geometry('900x500')
         self.font = tkFont.Font(family='helvetica', size=20)
+
         self.game = Game()
         login = login_dialog(self)
         self.user = login.show()
@@ -269,7 +270,7 @@ class MainWindow(tk.Tk):
 
 
         self.menubar = tk.Menu(self)
-        self.menubar.add_command(label='Exit', command=self.exit_process)
+        self.menubar.add_command(label='Exit', command=self.exit_no_save)
         self.menubar.add_command(label='Show History', command=self.display_user_progress)
         self.config(menu=self.menubar)
 
@@ -442,6 +443,12 @@ class MainWindow(tk.Tk):
         self.pack_progress()
         self.quit()
 
+    def exit_no_save(self):
+        really_exit = messagebox.askyesno('Really Exit','Are you sure you want exit?\n your progress will not be saved.')
+        if really_exit:
+            self.quit()
+        else:
+            return
 
 
 
