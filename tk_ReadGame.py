@@ -109,6 +109,15 @@ class Game(object):
             print('failed to get image')
         return img
 
+    def spell_current_word(self):
+        current_word = self.words[self.correct_index]
+        self.speech_engine.say('Spelling {} now'.format(current_word))
+        self.speech_engine.runAndWait()
+        self.speech_engine.setProperty('rate',self.rate+100)
+        for ch in current_word:
+            self.speech_engine.say(ch)
+            self.speech_engine.runAndWait()
+        self.speech_engine.setProperty('rate',self.rate)
 
 class MainWindow(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -143,8 +152,13 @@ class MainWindow(tk.Tk):
         print(self.photo)
         self.image_Canvas.pack()
         self.image_Canvas.create_image(10, 10, image=self.photo,anchor='nw')
+        
         self.listen_to_word_button = tk.Button(self, text='Listen to word', command=self.game.speak_word_to_find)
         self.listen_to_word_button.pack()
+        self.spell_word_button = tk.Button(self, text='Spell Word', command=self.game.spell_current_word)
+        self.spell_word_button.pack()
+
+
         self.guess_buttons = []
         for word, index in self.game.get_choice_list():
             self.guess_buttons.append(tk.Button(self, text=word, pady=5, command=lambda c=index: self.b_click(c)))
