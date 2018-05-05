@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import tkinter as tk
 import tkinter.font as tkFont
+from tkinter import messagebox
 import pyttsx3
 import pickle
 import random
@@ -49,7 +50,7 @@ class User(object):
             if self.difficulty > 1:
                 self.difficulty -= 1
     def __str__(self):
-        string = 'Name:{}\nLevel:{}\nRecent_Avg:{}'.format(self.name.upper(),
+        string = 'Name:{}\nLevel:{}\nRecent_Avg:{:.02f}'.format(self.name.upper(),
                                                            self.difficulty,
                                                            self.recent_avg)
         return string
@@ -178,29 +179,94 @@ class Game(object):
         self.speech_engine.setProperty('rate', self.rate)
 
 
+class login_dialog(tk.Toplevel):
+    def __init__(self, *args, **kwargs):
+        tk.Toplevel.__init__(self, *args, **kwargs)
+        self.parent = args[0]
+        self.parent.iconify()
+        self.protocol('WM_DELETE_WINDOW', self.exit)
+        self.top = self
+        self.transient()
+        self.grab_set()
+        self.userMap = {}
+        self.get_users_from_file()
+        self.font = tkFont.Font(family='helvetica', size=12)
+
+
+        self.user_buttons = []
+        for user in self.userMap:
+            self.user_buttons.append(tk.Button(self, text=self.userMap[user], font=self.font,
+                                               command=lambda u=user: self.get_current_user(u)))
+        last_row = 1
+        for i, button in enumerate(self.user_buttons):
+            button.grid(row=i, column=1)
+            last_row = i + 1
+
+        self.new_user_label = tk.Label(self, text='Create a new User', font=self.font).grid(row=last_row, column=2)
+        self.new_user_entry = tk.Entry(self, width=18)
+        self.new_user_entry.grid(row=last_row, column=3)
+
+        self.new_user_button = tk.Button(self, text='New User', font=self.font, command=self.new_user)
+        self.new_user_button.grid(row=last_row, column=4)
+        self.user = None
+
+    def new_user(self):
+        user_name = self.new_user_entry.get()
+        self.user = User(user_name)
+
+        self.exit()
+
+    def get_users_from_file(self):
+        try:
+            with open('progressTable.pickle', 'rb') as pf:
+                self.userMap = pickle.load(pf)
+            print(self.userMap)
+        except:
+            self.userMap = {}
+
+    def get_current_user(self, user):
+        self.user = self.userMap[user]
+
+        self.exit()
+
+    def exit(self):
+        self.parent.deiconify()
+        self.top.destroy()
+
+    def show(self):
+        self.wm_deiconify()
+        self.wait_window()
+        return self.user
 
 class MainWindow(tk.Tk):
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         # self.geometry('900x500')
+        self.font = tkFont.Font(family='helvetica', size=20)
         self.game = Game()
-        self.user = self.get_user('test_user')
+        login = login_dialog(self)
+        self.user = login.show()
+        while self.user is None:
+            messagebox.showerror('ERROR', 'You Must Select a user or create a new User to continue')
+            login = login_dialog(self)
+            self.user = login.show()
 
         self.update_user_difficulty()
         self.set_difficulty_from_current_user()
         self.game.randomize_correct_index()
-        print(self.user, self.user.history)
+
         self.history = []
         self.turns = 0
         self.max_turns = 10
-        self.scores = [0.0]
+
+        self.scores = []
         self.a_line = [0.9 for _ in range(self.max_turns)]
         self.b_line = [0.8 for _ in range(self.max_turns)]
         self.c_line = [0.7 for _ in range(self.max_turns)]
         self.d_line = [0.6 for _ in range(self.max_turns)]
         self.midline = [0.5 for _ in range(self.max_turns)]
         self.attributes('-fullscreen', True)
-        self.font = tkFont.Font(family='helvetica', size=20)
+
 
         self.menubar = tk.Menu(self)
         self.menubar.add_command(label='Exit', command=self.exit_process)
@@ -237,9 +303,9 @@ class MainWindow(tk.Tk):
         print(self.photo)
         self.image_Canvas.pack()
         self.image_Canvas.create_image(10, 10, image=self.photo,anchor='nw')
-        self.listen_to_word_button = tk.Button(self, text='Listen to word', command=self.game.speak_word_to_find)
+        self.listen_to_word_button = tk.Button(self, text='Listen to word',font=self.font, command=self.game.speak_word_to_find)
         self.listen_to_word_button.pack()
-        self.spell_word_button = tk.Button(self, text='Spell Word', command=self.game.spell_current_word)
+        self.spell_word_button = tk.Button(self, text='Spell Word',font=self.font, command=self.game.spell_current_word)
         self.spell_word_button.pack()
         self.guess_buttons = []
         for word, index in self.game.get_choice_list():
@@ -254,9 +320,11 @@ class MainWindow(tk.Tk):
     def b_click(self, index):
         self.game.speak_selected_word(index)
         self.game.tally_points(index)
-        self.regenerate_frame()
+        self.update_turn()
 
-    def regenerate_frame(self):
+    def update_turn(self):
+        self.turns += 1
+
         self.game.randomize_correct_index()
 
         for b in self.guess_buttons:
@@ -265,13 +333,32 @@ class MainWindow(tk.Tk):
 
         self.guess_buttons = []
         for word, index in self.game.get_choice_list():
-            self.guess_buttons.append(tk.Button(self, text=word, command=lambda c=index: self.b_click(c)))
+            self.guess_buttons.append(tk.Button(self, text=word, font=self.font, command=lambda c=index: self.b_click(c)))
 
         for b in self.guess_buttons:
             b.pack(expand=1, fill=tk.BOTH)
 
         self.update_Score_Frame()
         self.update_image_Canvas()
+
+        if self.turns == self.max_turns:
+            try:
+                score = self.scores[-1:][0]
+            except IndexError:
+                score = 0.0
+            message = 'Good Job, your final score is: {:.02f}%\nDo you want to Play again?'.format(score * 100)
+            go_again = messagebox.askyesno('Finished', message)
+
+            if go_again:
+                self.turns = 0
+                self.pack_progress()
+                self.scores = []
+                self.update_user_difficulty()
+                self.set_difficulty_from_current_user()
+                self.update_Score_Frame()
+                self.update_image_Canvas()
+            else:
+                self.exit_process()
 
     def update_image_Canvas(self):
         self.image_Canvas.delete(tk.ALL)
@@ -354,6 +441,9 @@ class MainWindow(tk.Tk):
     def exit_process(self):
         self.pack_progress()
         self.quit()
+
+
+
 
 app = MainWindow()
 app.mainloop()
