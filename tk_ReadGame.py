@@ -24,9 +24,10 @@ class Game(object):
 
         if platform.system() == 'Windows':
             self.voice = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0'
+            self.rate = 180
         elif platform.system() == 'Linux':
             self.voice = 'english'
-        self.rate = 180
+            self.rate = 120
         self.speech_engine = pyttsx3.init()
         self.speech_engine.setProperty('voice', self.voice)
         self.speech_engine.setProperty('rate',self.rate)
@@ -121,10 +122,9 @@ class Game(object):
         self.speech_engine.setProperty('rate', self.rate+100)
         string = ''
         for ch in current_word:
-            string += '{} '.format(ch)
-        self.speech_engine.say(string)
+            self.speech_engine.say(ch)
+            self.speech_engine.runAndWait()
 
-        self.speech_engine.runAndWait()
         self.speech_engine.setProperty('rate', self.rate)
 
 class MainWindow(tk.Tk):
