@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import tkinter as tk
 import tkinter.font as tkFont
 import pyttsx3
@@ -22,9 +23,9 @@ class Game(object):
             self.words = pickle.load(pf)
 
         if platform.system() == 'Windows':
-            voice = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0'
+            self.voice = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\TTS_MS_EN-US_ZIRA_11.0'
         elif platform.system() == 'Linux':
-            voice = 'english'
+            self.voice = 'english'
         self.rate = 180
         self.speech_engine = pyttsx3.init()
         self.speech_engine.setProperty('voice', self.voice)
