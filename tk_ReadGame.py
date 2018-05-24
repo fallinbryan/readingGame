@@ -88,7 +88,7 @@ class Game(object):
         :return: list of tuples [ ($word, index), ... ]
         '''
         word_option_indexes = [self.correct_index]
-        index_range = {1: 200, 2: 70, 3: 50, 4: 20, 5: 10}
+        index_range = {1: 200, 2: 70, 3: 50, 4: 20, 5: 10, 6:200, 7:70, 8:50, 9:20, 10:10}
         start = self.correct_index - index_range[self.difficulty]
         end = self.correct_index + index_range[self.difficulty]
         if start < 0:
