@@ -74,7 +74,7 @@ class Game(object):
         self.correct_index = 0
         self.max_difficulty = 5
         self.difficulty = 5
-        self.difficulty_map = {1: 3, 2: 4, 3: 5, 4: 6, 5: 20}
+        self.difficulty_map = {1: 3, 2: 4, 3: 5, 4: 6, 5: 20, 6: 3, 7: 4, 8: 5, 9: 6, 10: 20}
 
     def randomize_correct_index(self):
         random.seed(time.clock())
@@ -306,8 +306,9 @@ class MainWindow(tk.Tk):
         self.image_Canvas.create_image(10, 10, image=self.photo,anchor='nw')
         self.listen_to_word_button = tk.Button(self, text='Listen to word',font=self.font, command=self.game.speak_word_to_find)
         self.listen_to_word_button.pack()
-        self.spell_word_button = tk.Button(self, text='Spell Word',font=self.font, command=self.game.spell_current_word)
-        self.spell_word_button.pack()
+        if self.user.difficulty < 6:
+            self.spell_word_button = tk.Button(self, text='Spell Word',font=self.font, command=self.game.spell_current_word)
+            self.spell_word_button.pack()
         self.guess_buttons = []
         for word, index in self.game.get_choice_list():
             print('converting {} to button'.format(word))
